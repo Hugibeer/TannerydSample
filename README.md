@@ -1,5 +1,5 @@
 # TannerydSample
-The purpose of this repository is to insert sample items to test database and measure how long it took Tanneryd library to do so
+The purpose of this repository is to insert sample items to test database and measure how long it took [Tannyryd](https://github.com/mtanneryd/ef6-bulk-operations) library to do so
 
 ## Setup instructions
 1. Clone this repository (duuuh)
