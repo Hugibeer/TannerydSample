@@ -11,6 +11,11 @@ namespace ConsoleApp1
 {
 	class Program
 	{
+		enum Operation
+		{
+			Procedure, BulkExtensions, SqlBulkCopy
+		}
+
 		private const int NUMBER_OF_TEST_ITEMS = 1000000;
 		private const int CHUNK_SIZE = 4000;
 
@@ -21,35 +26,40 @@ namespace ConsoleApp1
 			{
 				Console.WriteLine("Use this tool with two parameters:");
 				Console.WriteLine("\trange should be integer for number of threads to execute");
-				Console.WriteLine("\tproc/bulk use proc to execute sql procedure, use bulk to execute tannyrd bulk insert all operation");
+				Console.WriteLine("\tproc/bulk/culkcopy use proc to execute sql procedure, use bulk to execute tannyrd bulk insert operation");
+				Console.WriteLine("\t\tuse proc to execute sql procedure");
+				Console.WriteLine("\t\ttuse bulk to execute tannyrd bulk insert operation");
+				Console.WriteLine("\t\tuse bulkcopy to execute SqlBulkCopy operation using DataTable aproach");
 				Console.WriteLine("Sample: consoleapp1.exe 3 proc");
 				return;
 			}
 
 			var range = int.Parse(args[0]);
-			var useSql = args[1].ToLower() == "proc";
+			var operationString = args[1].ToLower();
+			Operation operation = Operation.Procedure;
+			if (operationString == "proc" )
+			{
+				operation = Operation.Procedure;
+			}
+			else if (operationString == "bulk")
+			{
+				operation = Operation.BulkExtensions;
+			}
+			else if (operationString == "bulkcopy")
+			{
+				operation = Operation.SqlBulkCopy;
+			}
 
 			Task[] taskArray = new Task[range];
 			for (int i = 0; i < taskArray.Length; i++)
 			{
-				taskArray[i] = Task.Factory.StartNew(() => Measure(useSql));
+				taskArray[i] = Task.Factory.StartNew(() => Measure(operation));
 			}
 			Task.WaitAll(taskArray);
 		}
 
-		private static Double DoComputation(Double start)
+		private static void Measure(Operation operation)
 		{
-			var data = GenerateTestData();
-			Double sum = 0;
-			for (var value = start; value <= start + 10; value += .1)
-				sum += value;
-
-			return sum;
-		}
-
-		private static void Measure(bool useProcedure)
-		{
-			//Console.WriteLine($"Started at {DateTime.Now}");
 			var data = GenerateTestData();
 			var measurements = new List<double>();
 			var stopwatch = new Stopwatch();
@@ -57,24 +67,26 @@ namespace ConsoleApp1
 			using (var context = new Context())
 			{
 				stopwatch.Start();
-				foreach (var bulk in data.BulkTake(CHUNK_SIZE))
+				foreach (var bulk in data.BulkTake(CHUNK_SIZE).ToList())
 				{
 					var chunkWatch = new Stopwatch();
 					chunkWatch.Start();
-
-					if (useProcedure)
+					switch (operation)
 					{
-						var parameter = GenerateDataTable("parameterName", bulk);
-						var rowsAffected = context.Database.ExecuteSqlCommand("exec dbo.InsertTest @parameterName", parameter);
-					}
-					else
-					{
-						context.BulkInsertAll(bulk.ToList());
+						case Operation.Procedure:
+							ExecuteProcedure(context, bulk);
+							break;
+						case Operation.BulkExtensions:
+							TannerydInsert(context, bulk);
+							break;
+						case Operation.SqlBulkCopy:
+							SqlBulkInsert(context, bulk);
+							break;
+						default:
+							break;
 					}
 
 					chunkWatch.Stop();
-
-					//Console.WriteLine($"Elapsed {chunkWatch.Elapsed.TotalSeconds}");
 
 					measurements.Add(chunkWatch.Elapsed.TotalSeconds);
 				}
@@ -84,11 +96,48 @@ namespace ConsoleApp1
 			var average = measurements.Average();
 			var elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
 			Console.WriteLine($"Total elapsed time {elapsedSeconds}, average seconds per {CHUNK_SIZE} entries {average}");
-
-			//Console.WriteLine($"Ended at {DateTime.Now}");
 		}
 
-		private static SqlParameter GenerateDataTable(string parameterName, List<Test> bulk)
+		private static void SqlBulkInsert(Context context, List<Test> bulk)
+		{
+			using (SqlBulkCopy bcp = new SqlBulkCopy(context.Database.Connection.ConnectionString))
+			{
+				bcp.DestinationTableName = "[Test]";
+
+				bcp.ColumnMappings.Add("Name", "Name");
+				bcp.ColumnMappings.Add("DateOfBirth", "DateOfBirth");
+
+				var dt = GenerateDataTable(bulk);
+
+				bcp.WriteToServer(dt);
+			}
+		}
+
+		private static void TannerydInsert(Context context, List<Test> bulk)
+		{
+			context.BulkInsertAll(bulk.ToList());
+		}
+
+		private static void ExecuteProcedure(Context context, List<Test> bulk)
+		{
+			var parameter = GenerateParameter("parameterName", bulk);
+			context.Database.ExecuteSqlCommand("exec dbo.InsertTest @parameterName", parameter);
+		}
+
+		private static SqlParameter GenerateParameter(string parameterName, List<Test> bulk)
+		{
+			var dt = GenerateDataTable(bulk);
+
+			var sqlParameter = new SqlParameter(parameterName, SqlDbType.Structured)
+			{
+				TypeName = "dbo.TestInsertType",
+				Value = dt
+			};
+
+			return sqlParameter;
+		}
+
+		private static DataTable GenerateDataTable(List<Test> bulk)
 		{
 			var dt = new DataTable();
 			dt.Columns.Add("Name", typeof(string));
@@ -101,15 +150,8 @@ namespace ConsoleApp1
 				row[1] = value.DateOfBirth;
 				dt.Rows.Add(row);
 			}
-			//return dt;
 
-			var sqlParameter = new SqlParameter(parameterName, SqlDbType.Structured)
-			{
-				TypeName = "dbo.TestInsertType",
-				Value = dt
-			};
-
-			return sqlParameter;
+			return dt;
 		}
 
 		private static void DeleteOldEntries()

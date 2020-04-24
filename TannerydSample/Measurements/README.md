@@ -7,9 +7,12 @@ Measurements are below:
 - 1 thread
   - SQL procedure - around 6 seconds
   - Tannyryd bulk library - around 11 seconds
+  - SQL BulkCopy - around 5 seconds
 - 5 thread
-  - SQL procedure - around 15 seconds
+  - SQL procedure - around 15-20 seconds
   - Tannyryd bulk library - around 76 seconds
+  - SQL BulkCopy - around 28 seconds
 - 10 thread
-  - SQL procedure - around 34 seconds
+  - SQL procedure - around 34-50 seconds
   - Tannyryd bulk library - around 235 seconds
+  - SQL BulkCopy - around 60 seconds
