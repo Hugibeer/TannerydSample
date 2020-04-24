@@ -37,7 +37,7 @@ END
     connectionString="Data Source=<yourDbServerName>;Initial Catalog=SampleDatabase;Integrated Security=SSPI;MultipleActiveResultSets=True"
     providerName="System.Data.SqlClient" />
 ```
-4. Open command prompty and run `dotnet build`
+4. Open solution and rebuild it
 5. Navigate to TannerydSample\ConsoleApp1\bin\Debug and run `.\ConsoleApp1.exe 1 proc`. This will measure thread execution with sql procedure insert. To use Tanneryd bulk operations, replace `proc` with `bulk`
 
 ## Remarks
