@@ -88,7 +88,7 @@ namespace ConsoleApp1
 				Console.WriteLine("No entries");
 			}
 
-			Console.WriteLine($"Average time per execution {lines.Average()}");
+			Console.WriteLine($"Average time per execution {lines.Average()}, max {lines.Max()}, min {lines.Min()}");
 		}
 
 		private static string ReplaceLastComma(string elapsedThreadTime)
