@@ -1,6 +1,6 @@
 # Measurements
 Here are shown the measurements for SQL procedure and bulk operation variant of bulk inserting records.
-t is obvious that Tannyryd is much slower than plain old SQL insert procedure, and especially with multiple threads accessing the database.
+It is obvious that Tannyryd is much slower than plain old SQL insert procedure, and especially with multiple threads accessing the database.
 Measurements were taken for 1 thread, 5 threads and 10 threads.
 Each thread would insert 1 000 000 records in bulks of 4000 at a time.
 Measurements are below:

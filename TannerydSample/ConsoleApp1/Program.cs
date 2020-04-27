@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Tanneryd.BulkOperations.EF6;
@@ -25,16 +26,25 @@ namespace ConsoleApp1
 			if (args.Length != 2)
 			{
 				Console.WriteLine("Use this tool with two parameters:");
-				Console.WriteLine("\trange should be integer for number of threads to execute");
-				Console.WriteLine("\tproc/bulk/culkcopy use proc to execute sql procedure, use bulk to execute tannyrd bulk insert operation");
+				Console.WriteLine("\tnumber/analyze as first parameter");
+				Console.WriteLine("\t\tuse integer number to indicate number of parallel thread executions");
+				Console.WriteLine("\t\tuse analyze to analyze the resultset");
+				Console.WriteLine("\tproc/bulk/bulkcopy/filename use proc to execute sql procedure, use bulk to execute tannyrd bulk insert operation");
 				Console.WriteLine("\t\tuse proc to execute sql procedure");
 				Console.WriteLine("\t\ttuse bulk to execute tannyrd bulk insert operation");
 				Console.WriteLine("\t\tuse bulkcopy to execute SqlBulkCopy operation using DataTable aproach");
+				Console.WriteLine("\t\tfilename of the file which should be analyzed");
 				Console.WriteLine("Sample: consoleapp1.exe 3 proc");
 				return;
 			}
 
-			var range = int.Parse(args[0]);
+			var firstArgument = args[0];
+			if (firstArgument.ToLower() == "analyze")
+			{
+				Analyze(args[1]);
+				return;
+			}
+			var range = int.Parse(firstArgument);
 			var operationString = args[1].ToLower();
 			Operation operation = Operation.Procedure;
 			if (operationString == "proc" )
@@ -58,6 +68,39 @@ namespace ConsoleApp1
 			Task.WaitAll(taskArray);
 		}
 
+		private static void Analyze(string filename)
+		{
+			if (!File.Exists(filename))
+			{
+				throw new ArgumentException("Nonexistent file name", nameof(filename));
+			}
+			var lines = File.ReadAllLines(filename)
+				.Select(line =>
+				{
+					var splitLine = line.Split(' ');
+					var elapsedThreadTime = splitLine[3];
+					elapsedThreadTime = ReplaceLastComma(elapsedThreadTime);
+
+					return decimal.Parse(elapsedThreadTime);
+				});
+			if (!lines.Any())
+			{
+				Console.WriteLine("No entries");
+			}
+
+			Console.WriteLine($"Average time per execution {lines.Average()}");
+		}
+
+		private static string ReplaceLastComma(string elapsedThreadTime)
+		{
+			if (elapsedThreadTime.LastIndexOf(',') == elapsedThreadTime.Length - 1)
+			{
+				elapsedThreadTime = elapsedThreadTime.Substring(0, elapsedThreadTime.Length - 1);
+			}
+
+			return elapsedThreadTime;
+		}
+
 		private static void Measure(Operation operation)
 		{
 			var data = GenerateTestData();
@@ -67,8 +110,13 @@ namespace ConsoleApp1
 			using (var context = new Context())
 			{
 				stopwatch.Start();
-				foreach (var bulk in data.BulkTake(CHUNK_SIZE).ToList())
+				for (int i = 0; i * CHUNK_SIZE < NUMBER_OF_TEST_ITEMS; i++)
 				{
+					var bulk = data
+						.Skip(i * CHUNK_SIZE)
+						.Take(CHUNK_SIZE)
+						.ToList();
+
 					var chunkWatch = new Stopwatch();
 					chunkWatch.Start();
 					switch (operation)
@@ -95,7 +143,7 @@ namespace ConsoleApp1
 			}
 			var average = measurements.Average();
 			var elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-			Console.WriteLine($"Total elapsed time {elapsedSeconds}, average seconds per {CHUNK_SIZE} entries {average}");
+			Console.WriteLine($"Total elapsed time {elapsedSeconds} average seconds per {CHUNK_SIZE} entries {average}");
 		}
 
 		private static void SqlBulkInsert(Context context, List<Test> bulk)
