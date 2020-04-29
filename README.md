@@ -42,3 +42,6 @@ END
 
 ## Remarks
 Solution is created in Visual Studio 2019 community edition.
+
+# TLDR
+The best seems to be SQL bulk copy, SQL procedure is the fastest but has extreme deviations under high load, Tanneryd buk operations, although good themselves, can't come close to the performance of SQL bulk copy and SQL procedure insert

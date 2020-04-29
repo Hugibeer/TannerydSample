@@ -22,7 +22,6 @@ namespace ConsoleApp1
 
 		static void Main(string[] args)
 		{
-			DeleteOldEntries();
 			if (args.Length != 2)
 			{
 				Console.WriteLine("Use this tool with two parameters:");
@@ -44,6 +43,7 @@ namespace ConsoleApp1
 				Analyze(args[1]);
 				return;
 			}
+			DeleteOldEntries();
 			var range = int.Parse(firstArgument);
 			var operationString = args[1].ToLower();
 			Operation operation = Operation.Procedure;
@@ -88,7 +88,16 @@ namespace ConsoleApp1
 				Console.WriteLine("No entries");
 			}
 
-			Console.WriteLine($"Average time per execution {lines.Average()}, max {lines.Max()}, min {lines.Min()}");
+			var average = lines.Average();
+			var min = lines.Min();
+			var max = lines.Max();
+			var tenPercentOfAverage = average * 0.2m;
+			var totalItems = (double)lines.Count();
+			var moreThanTenPercentDeviating = lines
+				.Where(x => x - average > tenPercentOfAverage)
+				.Count() / totalItems * 100.0;
+
+			Console.WriteLine($"Average time per execution {average}, max {max}, min {min}, more than 20 percent deviation {moreThanTenPercentDeviating} percent");
 		}
 
 		private static string ReplaceLastComma(string elapsedThreadTime)
