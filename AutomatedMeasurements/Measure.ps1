@@ -1,5 +1,5 @@
 $exe ="..\TannerydSample\ConsoleApp1\bin\Debug\ConsoleApp1.exe"
-$numOfExecutions = 100
+$numOfExecutions = 900
 
 for ($i = 0; $i -lt $numOfExecutions; $i++) {
     & $exe 1 proc >> proc_1.txt
@@ -8,7 +8,7 @@ for ($i = 0; $i -lt $numOfExecutions; $i++) {
 
     & $exe 1 bulkcopy >> bulkcopy_1.txt
     & $exe 5 bulkcopy >> bulkcopy_5.txt
-    & $exe 10 bulkcopy >> bulkcopy_19.txt
+    & $exe 10 bulkcopy >> bulkcopy_10.txt
 }
 
 & $exe analyze proc_1.txt >> analysis_proc1.txt
